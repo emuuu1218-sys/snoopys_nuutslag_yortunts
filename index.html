@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snoopy's Nuutslag Yortunts</title>
+    <link rel="stylesheet" href="snoopy-cute-styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="snoopy-header"></div>
+        <h1>Snoopy's Nuutslag Yortunts</h1>
+        <p class="subtitle">Enter the 4-digit code</p>
+        
+        <div class="passcode-display">
+            <div class="dot" id="dot1"></div>
+            <div class="dot" id="dot2"></div>
+            <div class="dot" id="dot3"></div>
+            <div class="dot" id="dot4"></div>
+        </div>
+
+        <div class="keypad">
+            <button class="key" onclick="addDigit(1)">1</button>
+            <button class="key" onclick="addDigit(2)">2</button>
+            <button class="key" onclick="addDigit(3)">3</button>
+            <button class="key" onclick="addDigit(4)">4</button>
+            <button class="key" onclick="addDigit(5)">5</button>
+            <button class="key" onclick="addDigit(6)">6</button>
+            <button class="key" onclick="addDigit(7)">7</button>
+            <button class="key" onclick="addDigit(8)">8</button>
+            <button class="key" onclick="addDigit(9)">9</button>
+            <button class="key" onclick="addDigit(0)">0</button>
+            <button class="key clear" onclick="clearCode()">Clear 🐾</button>
+        </div>
+
+        <div class="message" id="message"></div>
+    </div>
+
+    <div class="success-overlay" id="successOverlay">
+        <div class="success-content">
+            <div class="emoji">
+                <img src="/images/celebration.png" alt="Celebration">
+            </div>
+            <h2>Welcome! ✅</h2>
+            <p>Amjilttai nevterlee!!!!!!</p>
+        </div>
+    </div>
+
+    <!-- Notes App -->
+    <div class="notes-app" id="notesApp">
+        <div class="notes-header">
+            <h2>🐾 Snoopy's Notes</h2>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="note-input-section">
+            <textarea id="noteText" placeholder="Write your note here..."></textarea>
+            
+            <div class="note-controls">
+                <div class="control-buttons">
+                    <button class="control-btn" onclick="document.getElementById('photoInput').click()">
+                        📷 Photo
+                    </button>
+                    <button class="control-btn" id="voiceBtn" onclick="toggleVoiceRecording()">
+                        🎤 Voice
+                    </button>
+                    <input type="file" id="photoInput" accept="image/*" style="display: none;" onchange="handlePhotoUpload(event)">
+                </div>
+                <button class="save-btn" onclick="saveNote()">Save Note</button>
+            </div>
+
+            <div id="photoPreview" class="photo-preview"></div>
+            <div id="voiceStatus" class="voice-status"></div>
+        </div>
+
+        <div class="notes-list" id="notesList">
+            <!-- Notes will be displayed here -->
+        </div>
+    </div>
+
+    <script>
+        let passcode = '';
+        const correctCode = '0418';
+        let notes = [];
+        let currentPhoto = null;
+        let currentVoiceBlob = null;
+        let mediaRecorder = null;
+        let isRecording = false;
+
+        // Load notes from localStorage on page load
+        window.addEventListener('load', () => {
+            const savedNotes = localStorage.getItem('snoopyNotes');
+            if (savedNotes) {
+                notes = JSON.parse(savedNotes);
+                displayNotes();
+            }
+        });
+
+        function addDigit(digit) {
+            if (passcode.length < 4) {
+                passcode += digit;
+                updateDisplay();
+                
+                if (passcode.length === 4) {
+                    setTimeout(checkCode, 300);
+                }
+            }
+        }
+
+        function updateDisplay() {
+            for (let i = 1; i <= 4; i++) {
+                const dot = document.getElementById('dot' + i);
+                if (i <= passcode.length) {
+                    dot.classList.add('filled');
+                } else {
+                    dot.classList.remove('filled');
+                }
+                dot.classList.remove('error');
+            }
+            document.getElementById('message').textContent = '';
+        }
+
+        function checkCode() {
+            if (passcode === correctCode) {
+                showSuccess();
+            } else {
+                showError();
+            }
+        }
+
+        function showSuccess() {
+            createPawPrints();
+            setTimeout(() => {
+                document.getElementById('successOverlay').style.display = 'flex';
+            }, 500);
+            
+            setTimeout(() => {
+                document.getElementById('successOverlay').style.display = 'none';
+                document.querySelector('.container').style.display = 'none';
+                document.getElementById('notesApp').style.display = 'block';
+            }, 2500);
+        }
+
+        function showError() {
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach(dot => dot.classList.add('error'));
+            
+            document.getElementById('message').textContent = 'Oops, Try again nigga kk 🦴';
+            
+            setTimeout(() => {
+                passcode = '';
+                updateDisplay();
+            }, 1000);
+        }
+
+        function clearCode() {
+            passcode = '';
+            updateDisplay();
+        }
+
+        function createPawPrints() {
+            const emojis = ['🐾', '🦴', '❤️'];
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => {
+                    const paw = document.createElement('div');
+                    paw.className = 'paw-prints';
+                    paw.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                    paw.style.left = Math.random() * window.innerWidth + 'px';
+                    paw.style.top = Math.random() * window.innerHeight + 'px';
+                    document.body.appendChild(paw);
+                    
+                    setTimeout(() => paw.remove(), 2000);
+                }, i * 100);
+            }
+        }
+
+        // Notes App Functions
+        function handlePhotoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    currentPhoto = e.target.result;
+                    document.getElementById('photoPreview').innerHTML = 
+                        `<img src="${currentPhoto}" alt="Preview"><button onclick="removePhoto()">✕</button>`;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removePhoto() {
+            currentPhoto = null;
+            document.getElementById('photoPreview').innerHTML = '';
+            document.getElementById('photoInput').value = '';
+        }
+
+        async function toggleVoiceRecording() {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    const audioChunks = [];
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        currentVoiceBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const audioUrl = URL.createObjectURL(currentVoiceBlob);
+                        document.getElementById('voiceStatus').innerHTML = 
+                            `<div class="voice-preview">
+                                <audio controls src="${audioUrl}"></audio>
+                                <button onclick="removeVoice()">✕</button>
+                            </div>`;
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    document.getElementById('voiceBtn').textContent = '⏹️ Stop';
+                    document.getElementById('voiceStatus').innerHTML = '<span class="recording">🔴 Recording...</span>';
+                } catch (error) {
+                    alert('Microphone access denied!');
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                document.getElementById('voiceBtn').textContent = '🎤 Voice';
+            }
+        }
+
+        function removeVoice() {
+            currentVoiceBlob = null;
+            document.getElementById('voiceStatus').innerHTML = '';
+        }
+
+        function saveNote() {
+            const noteText = document.getElementById('noteText').value.trim();
+            
+            if (!noteText && !currentPhoto && !currentVoiceBlob) {
+                alert('Please add some content to your note!');
+                return;
+            }
+
+            const note = {
+                id: Date.now(),
+                text: noteText,
+                photo: currentPhoto,
+                voice: currentVoiceBlob ? URL.createObjectURL(currentVoiceBlob) : null,
+                date: new Date().toLocaleString()
+            };
+
+            notes.unshift(note);
+            localStorage.setItem('snoopyNotes', JSON.stringify(notes.map(n => ({
+                id: n.id,
+                text: n.text,
+                photo: n.photo,
+                voice: n.voice,
+                date: n.date
+            }))));
+
+            // Clear inputs
+            document.getElementById('noteText').value = '';
+            currentPhoto = null;
+            currentVoiceBlob = null;
+            document.getElementById('photoPreview').innerHTML = '';
+            document.getElementById('voiceStatus').innerHTML = '';
+            document.getElementById('photoInput').value = '';
+
+            displayNotes();
+        }
+
+        function displayNotes() {
+            const notesList = document.getElementById('notesList');
+            
+            if (notes.length === 0) {
+                notesList.innerHTML = '<div class="no-notes">No notes yet! Start writing 🐾</div>';
+                return;
+            }
+
+            notesList.innerHTML = notes.map(note => `
+                <div class="note-card">
+                    <div class="note-date">${note.date}</div>
+                    ${note.text ? `<div class="note-text">${note.text}</div>` : ''}
+                    ${note.photo ? `<img src="${note.photo}" class="note-photo" alt="Note photo">` : ''}
+                    ${note.voice ? `<audio controls src="${note.voice}" class="note-audio"></audio>` : ''}
+                    <button class="delete-btn" onclick="deleteNote(${note.id})">🗑️ Delete</button>
+                </div>
+            `).join('');
+        }
+
+        function deleteNote(id) {
+            if (confirm('Delete this note?')) {
+                notes = notes.filter(note => note.id !== id);
+                localStorage.setItem('snoopyNotes', JSON.stringify(notes));
+                displayNotes();
+            }
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                document.getElementById('notesApp').style.display = 'none';
+                document.querySelector('.container').style.display = 'block';
+                passcode = '';
+                updateDisplay();
+            }
+        }
+
+        // Allow keyboard input
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('notesApp').style.display === 'block') return;
+            
+            if (e.key >= '0' && e.key <= '9') {
+                addDigit(parseInt(e.key));
+            } else if (e.key === 'Backspace' || e.key === 'Delete') {
+                clearCode();
+            }
+        });
+    </script>
+</body>
+</html>
